@@ -182,6 +182,3 @@ flowchart TB
 
 ---
 
-## License
-
-MIT License (placeholder — add your license file before public release).
