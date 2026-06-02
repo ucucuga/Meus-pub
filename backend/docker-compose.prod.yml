@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: meus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-meus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meus_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-meus}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U meus']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - meus
+
+  redis:
+    image: redis:7-alpine
+    container_name: meus-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - meus
+
+  backend:
+    build: .
+    container_name: meus-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - '${PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - meus
+
+networks:
+  meus:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:

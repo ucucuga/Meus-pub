@@ -1,0 +1,25 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  -webkit-text-stroke: 0px;
+  color: #ffffff !important;
+  background: var(--badge-bg);
+  border: var(--badge-border);
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.badgeWorking {
+  background: rgba(59, 130, 246, 0.5);
+  border: 1.5px solid rgba(59, 130, 246, 0.9);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}

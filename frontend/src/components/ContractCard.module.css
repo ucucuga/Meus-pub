@@ -1,0 +1,477 @@
+.card {
+  width: 100%;
+  text-align: left;
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s ease;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.label {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.value {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.expandedContent {
+  overflow: hidden;
+  animation: expandIn 0.25s ease forwards;
+}
+
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.expandedDivider {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.skeletonRow {
+  height: 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  animation: pulse 1.4s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+.skeletonRow:last-child {
+  margin-bottom: 0;
+  height: 48px;
+}
+
+.descriptionBlock {
+  margin-top: 0;
+}
+
+.descriptionLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.descriptionBox {
+  min-height: 40px;
+  height: auto;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 6px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.statusSection {
+  margin-top: 12px;
+}
+
+.payHint {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  margin: 12px 0 8px;
+}
+
+.waitingText {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  margin-top: 12px;
+}
+
+.headline {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+}
+
+.subheadline {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  margin-top: 8px;
+}
+
+.workDisclaimer {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.uploadArea {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.uploadIcon {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.uploadLabel {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0 0 4px;
+}
+
+.uploadHint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.25);
+  margin: 0;
+}
+
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.fileIcon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.fileName {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileRemove {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.addMoreLink {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.filesNotice {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.filesNoticeTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 6px;
+}
+
+.filesNoticeText {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.gasHint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.5;
+  text-align: center;
+  margin: 0 0 12px;
+}
+
+.workDescriptionLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.workDescriptionInput {
+  width: 100%;
+  min-height: 88px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.workDescriptionInput:focus {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  outline: none;
+  box-shadow: none;
+}
+
+.workDescriptionInput::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.workDelivery {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.workDeliveryLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 6px;
+}
+
+.workDeliveryContent {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+  margin: 0;
+  word-break: break-word;
+}
+
+.workDeliveryLink {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #60a5fa;
+  text-decoration: none;
+}
+
+.workDeliveryLink:hover {
+  text-decoration: underline;
+}
+
+.timerLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.timerLarge {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  color: #ffffff;
+  text-align: center;
+  margin: 10px 0;
+}
+
+.disputeTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.disputeTimerSection {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.disputeTimerLabel {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.disputeTimerValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px;
+}
+
+.disputeReviewText {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  margin: 0;
+}
+
+.completedTitle {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  color: #4ade80;
+  margin-top: 8px;
+}
+
+.cancelledTitle {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  color: #94a3b8;
+  margin-top: 12px;
+}
+
+.expiredTitle {
+  font-size: 16px;
+  text-align: center;
+  color: #94a3b8;
+  margin-top: 12px;
+}
+
+.evidenceSubmitted {
+  font-size: 13px;
+  color: #4ade80;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.buttonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.primaryButton {
+  width: 100%;
+  height: 48px;
+  border-radius: 50px;
+  background: #3b82f6;
+  border: none;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.primaryButton:disabled,
+.outlineButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.outlineButton {
+  width: 100%;
+  height: 48px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

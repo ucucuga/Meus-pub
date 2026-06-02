@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────── User ───────────
+
+model User {
+  id              String   @id @default(uuid())
+  telegramId      BigInt   @unique
+  walletAddress   String?  @unique
+  walletPublicKey String?  // hex-encoded ed25519 public key, set on TON Connect verify
+  username        String?
+  firstName       String?
+  lastName        String?
+  photoUrl        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  employerEscrows   Escrow[] @relation("employer")
+  freelancerEscrows Escrow[] @relation("freelancer")
+  arbiterEscrows    Escrow[] @relation("arbiter")
+
+  raisedDisputes Dispute[]
+  notifications  Notification[]
+
+  @@index([telegramId])
+}
+
+// ─────────── Escrow ───────────
+
+enum EscrowStatus {
+  DRAFT
+  DEPLOYING
+  INIT
+  FUNDED
+  SUBMITTED
+  DISPUTE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+model Escrow {
+  id String @id @default(uuid())
+
+  employerId   String
+  employer     User    @relation("employer", fields: [employerId], references: [id])
+  freelancerId String?
+  freelancer   User?   @relation("freelancer", fields: [freelancerId], references: [id])
+  arbiterId    String?
+  arbiter      User?   @relation("arbiter", fields: [arbiterId], references: [id])
+
+  // Raw wallet addresses burned into the on-chain contract
+  employerWallet   String
+  freelancerWallet String
+  arbiterWallet    String
+
+  title       String
+  description String?
+  amount      BigInt // nanotons
+  deadline    DateTime
+
+  contractAddress String? @unique
+  deployTxHash    String?
+
+  status              EscrowStatus @default(DRAFT)
+  freelancerAccepted  Boolean      @default(false)
+  workHash            String?
+  reviewDeadline      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  disputes Dispute[]
+
+  @@index([employerId])
+  @@index([freelancerWallet])
+  @@index([status])
+}
+
+// ─────────── Dispute ───────────
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED_EMPLOYER
+  RESOLVED_FREELANCER
+  TIMEOUT
+}
+
+model Dispute {
+  id String @id @default(uuid())
+
+  escrowId   String
+  escrow     Escrow @relation(fields: [escrowId], references: [id])
+  raisedById String
+  raisedBy   User   @relation(fields: [raisedById], references: [id])
+
+  reason     String
+  evidence   Json?
+  status     DisputeStatus @default(OPEN)
+  resolution String?
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([escrowId])
+}
+
+// ─────────── Notification ───────────
+
+enum NotificationType {
+  ESCROW_CREATED
+  ESCROW_FUNDED
+  FREELANCER_ACCEPTED
+  INVITATION_RECEIVED
+  WORK_SUBMITTED
+  WORK_APPROVED
+  WORK_APPROVED_EMPLOYER
+  FREELANCER_WORK_STARTED
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
+  ESCROW_CANCELLED
+  ESCROW_EXPIRED
+  AUTO_RELEASED
+  DEADLINE_APPROACHING
+  REVIEW_DEADLINE_APPROACHING
+}
+
+model Notification {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  type     NotificationType
+  title    String
+  body     String
+  metadata Json?
+  read     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}

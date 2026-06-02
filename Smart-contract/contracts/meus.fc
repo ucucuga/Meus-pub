@@ -1,0 +1,273 @@
+#include "imports/stdlib.fc";
+
+const int STATUS_INIT       = 0;
+const int STATUS_FUNDED     = 1;
+const int STATUS_SUBMITTED  = 2;
+const int STATUS_DISPUTE    = 3;
+const int STATUS_COMPLETED  = 4;
+const int STATUS_CANCELLED  = 5;
+
+const int op::deposit       = 0x1;
+const int op::submit        = 0x2;
+const int op::approve       = 0x3;
+const int op::dispute       = 0x4;
+const int op::resolve       = 0x5;
+const int op::cancel        = 0x6;
+const int op::auto_release     = 0x7;
+const int op::resolve_timeout  = 0x8;
+const int op::refund_expired   = 0x9;
+
+;; Commission tiers (amounts in nanotons)
+;; 1 TON = 1_000_000_000 nanotons
+const int TIER_1_MAX = 100000000000;   ;; 100 TON
+const int TIER_2_MAX = 500000000000;   ;; 500 TON
+const int TIER_1_RATE = 300;           ;; 3%
+const int TIER_2_RATE = 200;           ;; 2%
+const int TIER_3_RATE = 100;           ;; 1%
+const int BASIS_POINTS = 10000;
+
+int get_commission_rate(int amount) inline {
+    if (amount <= TIER_1_MAX) {
+        return TIER_1_RATE;   ;; 3% for <= 100 TON
+    }
+    if (amount <= TIER_2_MAX) {
+        return TIER_2_RATE;   ;; 2% for 100-500 TON
+    }
+    return TIER_3_RATE;       ;; 1% for > 500 TON
+}
+
+const int COMMISSION_WC   = 0;
+const int COMMISSION_HASH = 0x0A14A804E6B8C3E9CED17D7F61208A499638F6879A0CC242A07CEAC007FCC98A;
+
+slice commission_address() inline {
+    return begin_cell()
+        .store_uint(4, 3)
+        .store_int(COMMISSION_WC, 8)
+        .store_uint(COMMISSION_HASH, 256)
+    .end_cell().begin_parse();
+}
+
+const int REVIEW_PERIOD = 172800;
+
+const int DISPUTE_TIMEOUT = 2592000;
+
+const int MIN_ESCROW_AMOUNT = 10000000;
+
+global slice ctx_employer;
+global slice ctx_freelancer;
+global slice ctx_arbiter;
+global slice ctx_deployer;
+global int   ctx_amount;
+global int   ctx_deadline;
+global int   ctx_review_deadline;
+global int   ctx_status;
+global cell  ctx_work_hash;
+
+() load_data() impure inline {
+    slice ds = get_data().begin_parse();
+
+    ctx_employer   = ds~load_msg_addr();
+    ctx_freelancer = ds~load_msg_addr();
+    ctx_arbiter    = ds~load_msg_addr();
+
+    slice ds2 = ds~load_ref().begin_parse();
+    ctx_deployer        = ds2~load_msg_addr();
+    ctx_amount          = ds2~load_coins();
+    ctx_deadline        = ds2~load_uint(32);
+    ctx_review_deadline = ds2~load_uint(32);
+    ctx_status          = ds2~load_uint(8);
+    ctx_work_hash       = ds2~load_ref();
+}
+
+() save_data() impure inline {
+    set_data(
+        begin_cell()
+            .store_slice(ctx_employer)
+            .store_slice(ctx_freelancer)
+            .store_slice(ctx_arbiter)
+            .store_ref(
+                begin_cell()
+                    .store_slice(ctx_deployer)
+                    .store_coins(ctx_amount)
+                    .store_uint(ctx_deadline, 32)
+                    .store_uint(ctx_review_deadline, 32)
+                    .store_uint(ctx_status, 8)
+                    .store_ref(ctx_work_hash)
+                .end_cell()
+            )
+        .end_cell()
+    );
+}
+
+() send_tons(slice to_addr, int value, int mode) impure inline {
+    cell msg = begin_cell()
+        .store_uint(NON_BOUNCEABLE, 6)
+        .store_slice(to_addr)
+        .store_coins(value)
+        .store_uint(0, MSG_INFO_REST_BITS)
+        .store_uint(0, 1)
+        .store_uint(0, 1)
+    .end_cell();
+    send_raw_message(msg, mode);
+}
+
+() release_funds(slice recipient) impure inline {
+    ;; Tiered commission (257-bit safe): <=100 TON 3%, <=500 TON 2%, >500 TON 1%.
+    ;; Skip send if floor(amount * rate / 10000) is zero (below min transferable).
+    int rate = get_commission_rate(ctx_amount);
+    int commission = ctx_amount * rate / BASIS_POINTS;
+
+    if (commission > 0) {
+        ;; Platform commission: fixed amount; IGNORE_ERRORS so a bad commission wallet cannot block payout.
+        send_tons(commission_address(), commission,
+                  SEND_MODE_PAY_FEES_SEPARATELY + SEND_MODE_IGNORE_ERRORS);
+    }
+
+    ;; Winner payout: fixed ctx_amount minus commission; leftover gas dust to deployer.
+    int payout = ctx_amount - commission;
+    send_tons(recipient, payout, SEND_MODE_PAY_FEES_SEPARATELY);
+    send_tons(ctx_deployer, 0, SEND_MODE_CARRY_ALL_BALANCE + SEND_MODE_DESTROY);
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) { return (); }
+    slice sender = cs~load_msg_addr();
+
+    load_data();
+
+    if (in_msg_body.slice_empty?()) {
+        ;; Empty body is valid only for deploy (STATUS_INIT); reject otherwise.
+        throw_if(0xffff, ctx_status != STATUS_INIT);
+        return ();
+    }
+
+    int op       = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    if (op == op::deposit) {
+        throw_unless(101, equal_slices_bits(sender, ctx_employer));
+        throw_unless(102, ctx_status == STATUS_INIT);
+        throw_unless(103, msg_value >= ctx_amount);
+        throw_unless(104, ctx_amount >= MIN_ESCROW_AMOUNT);
+
+        ctx_status = STATUS_FUNDED;
+        save_data();
+        return ();
+    }
+
+    if (op == op::submit) {
+        throw_unless(201,
+            equal_slices_bits(sender, ctx_freelancer) |
+            equal_slices_bits(sender, ctx_deployer));
+        throw_unless(202, ctx_status == STATUS_FUNDED);
+        throw_unless(203, now() <= ctx_deadline);
+        throw_unless(204, slice_refs(in_msg_body) >= 1);
+
+        ctx_work_hash       = in_msg_body~load_ref();
+        ctx_review_deadline = now() + REVIEW_PERIOD;
+        ctx_status          = STATUS_SUBMITTED;
+        save_data();
+        return ();
+    }
+
+    if (op == op::approve) {
+        throw_unless(301,
+            equal_slices_bits(sender, ctx_employer) |
+            equal_slices_bits(sender, ctx_deployer));
+        throw_unless(302, ctx_status == STATUS_SUBMITTED);
+
+        ctx_status = STATUS_COMPLETED;
+        save_data();
+        release_funds(ctx_freelancer);
+        return ();
+    }
+
+    if (op == op::dispute) {
+        throw_unless(401,
+            equal_slices_bits(sender, ctx_employer) |
+            equal_slices_bits(sender, ctx_deployer));
+        throw_unless(402, ctx_status == STATUS_SUBMITTED);
+        throw_unless(403, now() <= ctx_review_deadline);
+
+        ctx_status = STATUS_DISPUTE;
+        save_data();
+        return ();
+    }
+
+    if (op == op::resolve) {
+        throw_unless(501,
+            equal_slices_bits(sender, ctx_arbiter) |
+            equal_slices_bits(sender, ctx_deployer));
+        throw_unless(502, ctx_status == STATUS_DISPUTE);
+        throw_unless(503, slice_bits(in_msg_body) >= 8);
+
+        int winner = in_msg_body~load_uint(8);
+
+        ctx_status = STATUS_COMPLETED;
+        save_data();
+
+        if (winner) {
+            release_funds(ctx_freelancer);
+        } else {
+            release_funds(ctx_employer);
+        }
+        return ();
+    }
+
+    if (op == op::cancel) {
+        throw_unless(601, equal_slices_bits(sender, ctx_employer));
+        throw_unless(602, ctx_status == STATUS_FUNDED);
+
+        ctx_status = STATUS_CANCELLED;
+        save_data();
+
+        ;; Full refund to employer (no commission); gas dust to deployer.
+        send_tons(ctx_employer, ctx_amount, SEND_MODE_PAY_FEES_SEPARATELY);
+        send_tons(ctx_deployer, 0, SEND_MODE_CARRY_ALL_BALANCE + SEND_MODE_DESTROY);
+        return ();
+    }
+
+    if (op == op::auto_release) {
+        throw_unless(701, ctx_status == STATUS_SUBMITTED);
+        throw_unless(702, now() > ctx_review_deadline);
+
+        ctx_status = STATUS_COMPLETED;
+        save_data();
+        release_funds(ctx_freelancer);
+        return ();
+    }
+
+    if (op == op::resolve_timeout) {
+        throw_unless(801, ctx_status == STATUS_DISPUTE);
+        throw_unless(802, now() > ctx_review_deadline + DISPUTE_TIMEOUT);
+
+        ctx_status = STATUS_COMPLETED;
+        save_data();
+        release_funds(ctx_freelancer);
+        return ();
+    }
+
+    if (op == op::refund_expired) {
+        throw_unless(901, ctx_status == STATUS_FUNDED);
+        throw_unless(902, now() > ctx_deadline);
+
+        ctx_status = STATUS_CANCELLED;
+        save_data();
+
+        ;; Expired FUNDED rescue: escrow amount to employer; gas dust to deployer.
+        send_tons(ctx_employer, ctx_amount, SEND_MODE_PAY_FEES_SEPARATELY);
+        send_tons(ctx_deployer, 0, SEND_MODE_CARRY_ALL_BALANCE + SEND_MODE_DESTROY);
+        return ();
+    }
+
+    ;; Ops 0x1, 0x3, 0x4, 0x6, 0x7, 0x8, 0x9 read only op + query_id; extra body bits/refs are ignored safely.
+    throw(0xffff);
+}
+
+(int, int, int, int) get_escrow_data() method_id {
+    load_data();
+    return (ctx_status, ctx_amount, ctx_deadline, ctx_review_deadline);
+}
